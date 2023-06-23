@@ -25,6 +25,32 @@ export class SerialPortConsole {
 		this._echo = false;
 		this._flushOnEnter = false;
 
+		navigator.serial.addEventListener('disconnect', (event) => {
+			if (event.target === this._port) {
+				let now = new Date();
+				let hours = String(now.getHours()).padStart(2, '0');
+				let minutes = String(now.getMinutes()).padStart(2, '0');
+				let seconds = String(now.getSeconds()).padStart(2, '0');
+				let timestamp = `[${hours}:${minutes}:${seconds}] Connected\n`;
+	
+				this._terminal.write(timestamp);
+				//this.disconnect();
+			}
+		});
+
+		navigator.serial.addEventListener('connect', (event) => {
+			if (event.target === this._port) {
+				let now = new Date();
+				let hours = String(now.getHours()).padStart(2, '0');
+				let minutes = String(now.getMinutes()).padStart(2, '0');
+				let seconds = String(now.getSeconds()).padStart(2, '0');
+				let timestamp = `[${hours}:${minutes}:${seconds}] Disconnected\n`;
+	
+				this._terminal.write(timestamp);
+				//this.disconnect();
+			}
+		});
+
 		this._init();
 	}
 
@@ -78,13 +104,40 @@ export class SerialPortConsole {
 
 		this._callbacks.onConnected(port);
 
+		let decoder = new TextDecoder();  // for decoding bytes to text
+		let encoder = new TextEncoder();  // for encoding text to bytes
+		let lineBuffer = new Uint8Array();
+
 		while (this._port && this._port.readable) {
 			try {
 				this._reader = this._port.readable.getReader();
 				for (; ;) {
 					const { value, done } = await this._reader.read();
 					if (value) {
-						this._terminal.write(value);
+						// append value to buffer
+						lineBuffer = new Uint8Array([...lineBuffer, ...value]);
+
+						// check for linebreak in buffer
+						let linebreakIndex = lineBuffer.indexOf(0x0A);  // 0x0A = \n in ASCII
+						while (linebreakIndex !== -1) {
+							let line = lineBuffer.slice(0, linebreakIndex);
+							lineBuffer = lineBuffer.slice(linebreakIndex + 1);
+
+							// add timestamp and write to terminal
+							let now = new Date();
+							let hours = String(now.getHours()).padStart(2, '0');
+							let minutes = String(now.getMinutes()).padStart(2, '0');
+							let seconds = String(now.getSeconds()).padStart(2, '0');
+							let timestamp = `[${hours}:${minutes}:${seconds}] `;
+
+							let timestampBytes = encoder.encode(timestamp);
+							let fullMessageBytes = new Uint8Array([...timestampBytes, ...line]);
+							let fullMessage = decoder.decode(fullMessageBytes);
+							this._terminal.write(fullMessage + '\n');  // Add newline to separate lines
+
+							// look for the next linebreak
+							linebreakIndex = lineBuffer.indexOf(0x0A);
+						}
 					}
 					if (done) {
 						break;
