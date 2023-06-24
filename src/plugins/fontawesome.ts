@@ -1,4 +1,5 @@
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+/*
 import { library } from '@fortawesome/fontawesome-svg-core';
 import {
 	faSync,
@@ -18,7 +19,7 @@ import {
 	faChevronDown,
 	faChevronUp,
 	
-} from '@fortawesome/pro-regular-svg-icons';
+} from '@fortawesome/fontawesome-free';
 
 library.add({
 	faSync,
@@ -39,5 +40,5 @@ library.add({
 	faChevronUp,
 	
 });
-
+*/
 export { FontAwesomeIcon };
